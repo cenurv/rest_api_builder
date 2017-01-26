@@ -4,7 +4,7 @@ defmodule AutoApi do
   """
 
   defmacro __using__(opts) do
-    resource_name = Keyword.get opts, :name, nil
+    resource_name = to_string Keyword.get(opts, :name, nil)
 
     quote do
       use Plug.Router
@@ -14,7 +14,14 @@ defmodule AutoApi do
       plug :match
       plug :dispatch
 
-      def resource_name, do: to_string(unquote(resource_name))
+      @resource_path unquote(resource_name)
+
+      defmacro route_to(prepend_path, module_path) do
+        path = "#{prepend_path}/#{@resource_path}"
+        quote do
+          forward unquote(path), to: unquote(module_path)
+        end
+      end
 
       defp __not_ready__(conn) do
         conn
@@ -22,20 +29,21 @@ defmodule AutoApi do
         |> send_resp(501, "Not yet implemented.")
       end
 
+      def preload(conn), do: conn
       def index(conn), do: __not_ready__ conn
       def show(conn), do: __not_ready__ conn
       def create(conn), do: __not_ready__ conn
       def update(conn), do: __not_ready__ conn
       def delete(conn), do: __not_ready__ conn
 
-      defoverridable [index: 1, show: 1, create: 1, update: 1, delete: 1]
+      defoverridable [index: 1, show: 1, create: 1, update: 1, delete: 1, preload: 1]
 
       get "/" do
         index var!(conn)
       end
 
       get "/:id" do
-        show var!(conn)
+        show preload(var!(conn))
       end
 
       post "/" do
@@ -43,7 +51,7 @@ defmodule AutoApi do
       end
 
       put "/:id" do
-        update var!(conn)
+        update preload(var!(conn))
       end
 
       delete "/:id" do
@@ -54,7 +62,24 @@ defmodule AutoApi do
 
   defmacro provider(provider_module, opts) do
     quote do
-      # nothing
+      require unquote(provider_module)
+      unquote(provider_module).generate unquote(opts)
+    end
+  end
+
+  defmacro include(module) do
+    quote do
+      require unquote(module)
+
+      unquote(module).route_to "/", unquote(module)
+    end
+  end
+
+  defmacro children(module) do
+    quote do
+      require unquote(module)
+
+      unquote(module).route_to "/", unquote(module)
     end
   end
 end

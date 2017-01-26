@@ -29,6 +29,7 @@ defmodule AutoApi.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [{:plug, "~> 1.3"},
-     {:event_queues, "~> 1.1"}]
+     {:event_queues, "~> 1.1"},
+     {:poison, "~> 2.2"}]
   end
 end
