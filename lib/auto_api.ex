@@ -12,15 +12,29 @@ defmodule AutoApi do
       import AutoApi
 
       plug :match
+      plug :preload_plug
       plug :dispatch
 
       @resource_path unquote(resource_name)
+
+      defp send_response(conn, status, resource) do
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.send_resp(status, Poison.encode!(resource))
+      end
 
       defmacro route_to(prepend_path, module_path) do
         path = "#{prepend_path}/#{@resource_path}"
         quote do
           forward unquote(path), to: unquote(module_path)
         end
+      end
+
+      def preload_plug(%Plug.Conn{path_params: %{"id" => id}} = conn, _opts) do
+        preload conn
+      end
+      def preload_plug(conn, _opts) do
+        conn
       end
 
       defp __not_ready__(conn) do
@@ -43,7 +57,7 @@ defmodule AutoApi do
       end
 
       get "/:id" do
-        show preload(var!(conn))
+        show var!(conn)
       end
 
       post "/" do
@@ -51,7 +65,7 @@ defmodule AutoApi do
       end
 
       put "/:id" do
-        update preload(var!(conn))
+        update var!(conn)
       end
 
       delete "/:id" do
@@ -70,7 +84,6 @@ defmodule AutoApi do
   defmacro include(module) do
     quote do
       require unquote(module)
-
       unquote(module).route_to "/", unquote(module)
     end
   end
@@ -78,8 +91,16 @@ defmodule AutoApi do
   defmacro children(module) do
     quote do
       require unquote(module)
+      unquote(module).route_to "/:id/", unquote(module)
+    end
+  end
 
-      unquote(module).route_to "/", unquote(module)
+  defmacro feature(name, do: block) do
+    path = "/:id/#{name}"
+    quote do
+      post unquote(path) do
+        unquote(block)
+      end
     end
   end
 end
