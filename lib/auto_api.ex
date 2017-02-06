@@ -4,7 +4,8 @@ defmodule AutoApi do
   """
 
   defmacro __using__(opts) do
-    resource_name = to_string Keyword.get(opts, :name, nil)
+    plural_name = to_string Keyword.get(opts, :plural_name, nil)
+    singular_name = to_string Keyword.get(opts, :singular_name, nil)
     activate = Keyword.get opts, :activate, nil
 
     output =
@@ -13,16 +14,28 @@ defmodule AutoApi do
 
         import AutoApi
 
+        plug Plug.Parsers, parsers: [:json],
+                           json_decoder: Poison
         plug :match
         plug :preload_plug
         plug :dispatch
 
-        @resource_path unquote(resource_name)
+        @resource_path unquote(plural_name)
+
+        def plural_name, do: unquote(plural_name)
+
+        def singular_name, do: unquote(singular_name)
 
         defp send_response(conn, status, resource) do
           conn
           |> Plug.Conn.put_resp_content_type("application/json")
           |> Plug.Conn.send_resp(status, Poison.encode!(resource))
+        end
+
+        defp send_response(conn, status) do
+          conn
+          |> Plug.Conn.put_status(status)
+          |> Plug.Conn.send_resp
         end
 
         defmacro route_to(prepend_path, module_path) do
@@ -32,7 +45,8 @@ defmodule AutoApi do
           end
         end
 
-        def preload_plug(%Plug.Conn{path_params: %{"id" => id}} = conn, _opts) do
+        def preload_plug(%Plug.Conn{params: %{"id" => id}, path_info: path_info} = conn, _opts) 
+                            when path_info != [] do
           preload conn
         end
         def preload_plug(conn, _opts) do

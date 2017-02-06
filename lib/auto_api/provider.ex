@@ -14,4 +14,9 @@ defmodule AutoApi.Provider do
     |> Plug.Conn.put_resp_content_type("application/json")
     |> Plug.Conn.send_resp(status, Poison.encode!(resource))
   end
+
+  def send_response(conn, status) do
+    conn
+    |> Plug.Conn.send_resp(status, "")
+  end
 end
