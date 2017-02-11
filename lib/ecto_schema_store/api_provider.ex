@@ -4,6 +4,7 @@ defmodule EctoSchemaStore.ApiProvider do
   defmacro generate(opts) do
     store = Keyword.get opts, :store, nil
     parent_field = Keyword.get opts, :parent, nil
+    [soft_delete_field, soft_delete_value] = Keyword.get opts, :soft_delete, [:deleted, true]
 
     parent_field =
       if is_binary parent_field do
@@ -31,16 +32,28 @@ defmodule EctoSchemaStore.ApiProvider do
         if parent && parent_field do
           query =
             []
+            |> append_exclude_deleted
             |> Keyword.put(parent_field, parent.id)
 
           unquote(store).all query 
         else
-          unquote(store).all
+          unquote(store).all append_exclude_deleted([])
         end
       end
       defp fetch_all(conn) do
-        unquote(store).all
+        unquote(store).all append_exclude_deleted([])
       end
+
+      defp has_field?(field), do: field in unquote(store).schema_fields
+
+      defp append_exclude_deleted(params_list) when is_list params_list do
+        if has_field?(unquote(soft_delete_field)) do
+          Keyword.put params_list, unquote(soft_delete_field), {:!=, unquote(soft_delete_value)}
+        else
+          params_list
+        end
+      end
+      defp append_exclude_deleted(params), do: params
 
       def preload(%Plug.Conn{path_params: %{"id" => id}, assigns: assigns} = conn) do
         parent_field = unquote(parent_field)
@@ -50,11 +63,12 @@ defmodule EctoSchemaStore.ApiProvider do
           if parent && parent_field do
             query =
               [id: id]
+              |> append_exclude_deleted
               |> Keyword.put(parent_field, parent.id)
 
             unquote(store).one query 
           else
-            unquote(store).one id: id
+            unquote(store).one append_exclude_deleted([id: id])
           end
 
         validated =
@@ -129,8 +143,18 @@ defmodule EctoSchemaStore.ApiProvider do
         case current do
           nil -> send_response conn, 404, %{errors: "Not Found"}
           model ->
-            unquote(store).delete model
-            send_response conn, 204
+            if has_field?(unquote(soft_delete_field)) do
+              current = assigns[:current]
+              response = unquote(store).update_fields(current, Keyword.put([], unquote(soft_delete_field), unquote(soft_delete_value)), errors_to_map: singular_name())
+
+              case response do
+                  {:error, message} -> send_response conn, 403, %{errors: message}
+                  {:ok, record} -> send_response conn, 204
+              end
+            else
+              unquote(store).delete model
+              send_response conn, 204
+            end
         end
       end
 
