@@ -20,7 +20,11 @@ defmodule AutoApi do
         plug :preload_plug
         plug :dispatch
 
+        @link_table String.to_atom("#{__MODULE__}:links")
         @resource_path unquote(plural_name)
+
+        # Create a eay to track link declarations in the API module.
+        :ets.new @link_table, [:duplicate_bag, :public, :named_table]
 
         def plural_name, do: unquote(plural_name)
 
@@ -38,10 +42,36 @@ defmodule AutoApi do
           |> Plug.Conn.send_resp
         end
 
-        defmacro route_to(prepend_path, module_path) do
-          path = "#{prepend_path}/#{@resource_path}"
+        defp append_resource(%{assigns: %{resources: resources}} = conn, resource) do
+          current_path = "#{Enum.join(conn.script_name, "/")}/#{List.first(conn.path_info)}"
+          current_location = "#{conn.scheme}://#{Plug.Conn.get_req_header(conn, "host")}/#{current_path}"
+
+          conn
+          |> assign(:resources, Enum.concat(resources, [{resource, current_location}]))
+        end
+        defp append_resource(%{assigns: assigns} = conn, resource) do
+          append_resource Plug.Conn.assign(conn, :resources, []), resource
+        end
+
+        defp append_api_values(%Plug.Conn{assigns: %{resources: resources}} = conn, %{} = model) do
+          model
+          |> Map.put(:type, singular_name())
+          # |> Map.put(:links
+        end
+
+        defmacro route_to("/:id", module_path) do
+          path = "/:id/#{@resource_path}"
           quote do
             forward unquote(path), to: unquote(module_path)
+            link unquote(module_path).plural_name, "/#{unquote(@resource_path)}"
+          end
+        end
+
+        defmacro route_to("/", module_path) do
+          path = "/#{@resource_path}"
+          quote do
+            forward unquote(path), to: unquote(module_path)
+            group_link unquote(module_path).plural_name, unquote(path)
           end
         end
 
@@ -66,7 +96,9 @@ defmodule AutoApi do
         def update(conn), do: __not_ready__ conn
         def delete(conn), do: __not_ready__ conn
 
-        defoverridable [index: 1, show: 1, create: 1, update: 1, delete: 1, preload: 1]
+        def links, do: %{group: [], resource: []}
+
+        defoverridable [index: 1, show: 1, create: 1, update: 1, delete: 1, preload: 1, links: 0]
       end
 
     if activate do
@@ -159,7 +191,7 @@ defmodule AutoApi do
   defmacro children(module) do
     quote do
       require unquote(module)
-      unquote(module).route_to "/:id/", unquote(module)
+      unquote(module).route_to "/:id", unquote(module)
     end
   end
 
@@ -175,13 +207,21 @@ defmodule AutoApi do
     path = "/:id/#{name}"
     only = Keyword.get opts, :only
 
-    for method <- only do
-      quote do
-        match unquote(path), via: unquote(method) do
-          unquote(block)
+    output =
+      for method <- only do
+        quote do
+          match unquote(path), via: unquote(method) do
+            unquote(block)
+          end
         end
       end
-    end
+
+    link_output =
+      quote do
+        link unquote(name), "/#{unquote(name)}"
+      end
+
+    [output, link_output]
   end
 
   defmacro group_feature(name, do: block) do
@@ -196,11 +236,48 @@ defmodule AutoApi do
     path = "/#{name}"
     only = Keyword.get opts, :only
 
-    for method <- only do
-      quote do
-        match unquote(path), via: unquote(method) do
-          unquote(block)
+    output =
+      for method <- only do
+        quote do
+          match unquote(path), via: unquote(method) do
+            unquote(block)
+          end
         end
+      end
+
+    link_output =
+      quote do
+        group_link unquote(name), unquote(path)
+      end
+
+    [output, link_output]
+  end
+
+  defmacro group_link(name, href) do
+    quote do
+      :ets.insert @link_table, {:group, unquote(name), unquote(href)}
+    end
+  end
+
+  defmacro link(name, href) do
+    quote do
+      :ets.insert @link_table, {:resource, unquote(name), unquote(href)}
+    end
+  end
+
+  defmacro export_links do
+    quote do
+      @group_links :ets.lookup(@link_table, :group)
+      @resource_links :ets.lookup(@link_table, :resource)
+
+      def links do
+        group = Enum.map @group_links, fn(entry) -> %{name: elem(entry, 1), href: elem(entry, 2)} end
+        resource = Enum.map @resource_links, fn(entry) -> %{name: elem(entry, 1), href: elem(entry, 2)} end
+
+        %{
+          group: group,
+          resource: resource
+        }
       end
     end
   end

@@ -57,8 +57,9 @@ defmodule EctoSchemaStore.ApiProvider do
 
       def preload(%Plug.Conn{path_params: %{"id" => id}, assigns: assigns} = conn) do
         parent_field = unquote(parent_field)
+        resources = assigns[:resources]
 
-        parent = assigns[:current]
+        {parent, _href} = List.last(resources || [])
         current =
           if parent && parent_field do
             query =
@@ -80,6 +81,7 @@ defmodule EctoSchemaStore.ApiProvider do
 
         if validated do
           conn
+          |> append_resource(current)
           |> assign(:parent, parent)
           |> assign(:current, current)
         else
