@@ -42,21 +42,48 @@ defmodule AutoApi do
           |> Plug.Conn.send_resp
         end
 
-        defp append_resource(%{assigns: %{resources: resources}} = conn, resource) do
+        defp current_location(conn) do
           current_path = "#{Enum.join(conn.script_name, "/")}/#{List.first(conn.path_info)}"
-          current_location = "#{conn.scheme}://#{Plug.Conn.get_req_header(conn, "host")}/#{current_path}"
+          "#{conn.scheme}://#{Plug.Conn.get_req_header(conn, "host")}/#{current_path}"
+        end
 
+        defp append_resource(%{assigns: %{resources: resources}} = conn, resource) do
           conn
-          |> assign(:resources, Enum.concat(resources, [{resource, current_location}]))
+          |> assign(:resources, Enum.concat(resources, [{resource, current_location(conn)}]))
         end
         defp append_resource(%{assigns: assigns} = conn, resource) do
           append_resource Plug.Conn.assign(conn, :resources, []), resource
         end
 
+        defp send_in_envelope(conn, contents) do
+          envelope = %{
+            links: group_links(current_location(conn)),
+            data: contents
+          }
+
+          send_response conn, 200, envelope
+        end
+
         defp append_api_values(%Plug.Conn{assigns: %{resources: resources}} = conn, %{} = model) do
+          {_current, current_href} = Enum.at resources, -1
+          relative_links = [%{name: :self, href: current_href}]
+
+          relative_links =
+            if length(resources) > 1 do
+              {_parent, parent_href} = Enum.at resources, -2
+              Enum.concat relative_links, [%{name: :parent, href: parent_href}]
+            else
+              relative_links
+            end
+
+          links =
+            []
+            |> Enum.concat(relative_links)
+            |> Enum.concat(resource_links(current_location(conn)))
+
           model
           |> Map.put(:type, singular_name())
-          # |> Map.put(:links
+          |> Map.put(:links, links)
         end
 
         defmacro route_to("/:id", module_path) do
@@ -96,9 +123,11 @@ defmodule AutoApi do
         def update(conn), do: __not_ready__ conn
         def delete(conn), do: __not_ready__ conn
 
-        def links, do: %{group: [], resource: []}
+        def group_links(_base_url \\ ""), do: []
+        def resource_links(_base_url \\ ""), do: []
 
-        defoverridable [index: 1, show: 1, create: 1, update: 1, delete: 1, preload: 1, links: 0]
+        defoverridable [index: 1, show: 1, create: 1, update: 1, delete: 1, preload: 1,
+                        group_links: 1, resource_links: 1, group_links: 0, resource_links: 0]
       end
 
     if activate do
@@ -270,14 +299,30 @@ defmodule AutoApi do
       @group_links :ets.lookup(@link_table, :group)
       @resource_links :ets.lookup(@link_table, :resource)
 
-      def links do
-        group = Enum.map @group_links, fn(entry) -> %{name: elem(entry, 1), href: elem(entry, 2)} end
-        resource = Enum.map @resource_links, fn(entry) -> %{name: elem(entry, 1), href: elem(entry, 2)} end
+      def group_links(base_url \\ "") do
+        Enum.map @group_links, fn(entry) ->
+          href =
+            if String.starts_with? elem(entry, 2), "http" do
+              elem(entry, 2)
+            else
+              "#{base_url}#{elem(entry, 2)}"
+            end
 
-        %{
-          group: group,
-          resource: resource
-        }
+          %{name: elem(entry, 1), href: href}
+        end
+      end
+
+      def resource_links(base_url \\ "") do
+        Enum.map @resource_links, fn(entry) ->
+          href =
+            if String.starts_with? elem(entry, 2), "http" do
+              elem(entry, 2)
+            else
+              "#{base_url}#{elem(entry, 2)}"
+            end
+
+          %{name: elem(entry, 1), href: href}
+        end
       end
     end
   end

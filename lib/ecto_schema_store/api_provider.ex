@@ -59,7 +59,7 @@ defmodule EctoSchemaStore.ApiProvider do
         parent_field = unquote(parent_field)
         resources = assigns[:resources]
 
-        {parent, _href} = List.last(resources || [])
+        {parent, _href} = List.last(resources || [{nil, nil}])
         current =
           if parent && parent_field do
             query =
@@ -92,7 +92,7 @@ defmodule EctoSchemaStore.ApiProvider do
       def show(%Plug.Conn{assigns: %{current: model}} = conn) do
         case conn.assigns.current do
           nil -> send_response conn, 404, %{errors: "Not Found"}
-          model -> send_response conn, 200, Map.put(%{}, singular_name(), whitelist(unquote(store).to_map(model)))
+          model -> send_in_envelope conn, append_api_values(conn, whitelist(unquote(store).to_map(model)))
         end
       end
       def show(conn), do: send_response conn, 404, %{errors: "Not Found"}
