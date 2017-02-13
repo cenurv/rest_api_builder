@@ -81,6 +81,9 @@ defmodule AutoApi do
             |> Enum.concat(relative_links)
             |> Enum.concat(resource_links(current_location(conn)))
 
+          attribute_keys =
+            
+
           model
           |> Map.put(:type, singular_name())
           |> Map.put(:links, links)
