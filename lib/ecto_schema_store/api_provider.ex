@@ -85,21 +85,21 @@ defmodule EctoSchemaStore.ApiProvider do
           |> assign(:parent, parent)
           |> assign(:current, current)
         else
-          conn |> send_response(404, %{errors: "Not Found"}) |> Plug.Conn.halt
+          conn |> send_errors("Not Found") |> Plug.Conn.halt
         end
       end
 
       def show(%Plug.Conn{assigns: %{current: model}} = conn) do
         case conn.assigns.current do
-          nil -> send_response conn, 404, %{errors: "Not Found"}
-          model -> send_in_envelope conn, append_api_values(conn, whitelist(unquote(store).to_map(model)))
+          nil -> send_errors conn, "Not Found"
+          model -> send_resource conn, whitelist(unquote(store).to_map(model))
         end
       end
-      def show(conn), do: send_response conn, 404, %{errors: "Not Found"}
+      def show(conn), do: send_errors conn, "Not Found"
 
       def index(conn) do
         records = fetch_all conn
-        send_response conn, 200, Map.put(%{}, plural_name(), whitelist(unquote(store).to_map(records)))
+        send_resource conn, whitelist(unquote(store).to_map(records))
       end
 
       def create(%Plug.Conn{assigns: assigns} = conn) do
@@ -118,8 +118,8 @@ defmodule EctoSchemaStore.ApiProvider do
         response = unquote(store).insert params, changeset: changeset, errors_to_map: singular_name()
 
         case response do
-          {:error, message} -> send_response conn, 403, %{errors: message}
-          {:ok, record} -> send_response conn, 201, Map.put(%{}, singular_name(), whitelist(unquote(store).to_map(record)))
+          {:error, message} -> send_errors conn, message
+          {:ok, record} -> send_resource conn, record
         end
       end
 
@@ -127,14 +127,14 @@ defmodule EctoSchemaStore.ApiProvider do
         current = assigns[:current]
 
         case current do
-          nil -> send_response conn, 404, %{errors: "Not Found"}
+          nil -> send_errors conn, "Not Found"
           model ->
             changeset = __use_changeset__ :update
             response = unquote(store).update model, conn.body_params, changeset: changeset, errors_to_map: singular_name()
 
             case response do
-              {:error, message} -> send_response conn, 403, %{errors: message}
-              {:ok, record} -> send_response conn, 200, Map.put(%{}, singular_name(), whitelist(unquote(store).to_map(record)))
+              {:error, message} -> send_errors conn, message
+              {:ok, record} -> send_resource conn, whitelist(unquote(store).to_map(record))
             end
         end
       end
@@ -143,19 +143,19 @@ defmodule EctoSchemaStore.ApiProvider do
         current = assigns[:current]
 
         case current do
-          nil -> send_response conn, 404, %{errors: "Not Found"}
+          nil -> send_errors conn, "Not Found"
           model ->
             if has_field?(unquote(soft_delete_field)) do
               current = assigns[:current]
               response = unquote(store).update_fields(current, Keyword.put([], unquote(soft_delete_field), unquote(soft_delete_value)), errors_to_map: singular_name())
 
               case response do
-                  {:error, message} -> send_response conn, 403, %{errors: message}
-                  {:ok, record} -> send_response conn, 204
+                  {:error, message} -> send_errors conn, message
+                  {:ok, record} -> send_resource conn, nil
               end
             else
               unquote(store).delete model
-              send_response conn, 204
+              send_resource conn, nil
             end
         end
       end

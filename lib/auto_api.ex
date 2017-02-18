@@ -7,6 +7,7 @@ defmodule AutoApi do
     plural_name = to_string Keyword.get(opts, :plural_name, nil)
     singular_name = to_string Keyword.get(opts, :singular_name, nil)
     activate = Keyword.get opts, :activate, nil
+    default_plugs = Keyword.get opts, :default_plugs, true
 
     output =
       quote do
@@ -14,11 +15,11 @@ defmodule AutoApi do
 
         import AutoApi
 
-        plug Plug.Parsers, parsers: [:json],
-                           json_decoder: Poison
-        plug :match
-        plug :preload_plug
-        plug :dispatch
+        if unquote(default_plugs) do
+          plugs do
+            plug AutoApi.DefaultEncodingPlug
+          end
+        end
 
         @link_table String.to_atom("#{__MODULE__}:links")
         @resource_path unquote(plural_name)
@@ -26,20 +27,23 @@ defmodule AutoApi do
         # Create a eay to track link declarations in the API module.
         :ets.new @link_table, [:duplicate_bag, :public, :named_table]
 
+        def preset_values(conn, _opts) do
+          conn
+          |> Plug.Conn.assign(:api_module, __MODULE__)
+        end
+
         def plural_name, do: unquote(plural_name)
 
         def singular_name, do: unquote(singular_name)
 
-        defp send_response(conn, status, resource) do
-          conn
-          |> Plug.Conn.put_resp_content_type("application/json")
-          |> Plug.Conn.send_resp(status, Poison.encode!(resource))
+        defp send_resource(%{assigns: %{api_encoder: encoder}} = conn, resource) do
+          conn = Plug.Conn.assign(conn, :resource, resource)
+          encoder.(conn)
         end
 
-        defp send_response(conn, status) do
-          conn
-          |> Plug.Conn.put_status(status)
-          |> Plug.Conn.send_resp
+        defp send_errors(%{assigns: %{api_encoder: encoder}} = conn, errors) do
+          conn = Plug.Conn.assign(conn, :errors, errors)
+          encoder.(conn)
         end
 
         defp current_location(conn) do
@@ -53,15 +57,6 @@ defmodule AutoApi do
         end
         defp append_resource(%{assigns: assigns} = conn, resource) do
           append_resource Plug.Conn.assign(conn, :resources, []), resource
-        end
-
-        defp send_in_envelope(conn, contents) do
-          envelope = %{
-            links: group_links(current_location(conn)),
-            data: contents
-          }
-
-          send_response conn, 200, envelope
         end
 
         defp append_api_values(%Plug.Conn{assigns: %{resources: resources}} = conn, %{} = model) do
@@ -142,6 +137,18 @@ defmodule AutoApi do
       [output, activate_output]
     else
       output
+    end
+  end
+
+  defmacro plugs(do: block) do
+    quote do
+      plug :preset_values
+      plug Plug.Parsers, parsers: [:json],
+                        json_decoder: Poison
+      unquote(block);
+      plug :match
+      plug :preload_plug
+      plug :dispatch
     end
   end
 
