@@ -105,7 +105,7 @@ defmodule EctoSchemaStore.ApiProvider do
       def create(%Plug.Conn{assigns: assigns} = conn) do
         parent_field = unquote(parent_field)
         parent = assigns[:current]
-        changeset = __use_changeset__ :create
+        changeset = __use_changeset__ conn, :create
 
         params =
           if parent && parent_field do
@@ -119,7 +119,7 @@ defmodule EctoSchemaStore.ApiProvider do
 
         case response do
           {:error, message} -> send_errors conn, message
-          {:ok, record} -> send_resource conn, record
+          {:ok, record} -> send_resource conn, whitelist(unquote(store).to_map(record))
         end
       end
 
@@ -129,7 +129,7 @@ defmodule EctoSchemaStore.ApiProvider do
         case current do
           nil -> send_errors conn, "Not Found"
           model ->
-            changeset = __use_changeset__ :update
+            changeset = __use_changeset__ conn, :update
             response = unquote(store).update model, conn.body_params, changeset: changeset, errors_to_map: singular_name()
 
             case response do
@@ -160,9 +160,9 @@ defmodule EctoSchemaStore.ApiProvider do
         end
       end
 
-      def __use_changeset__(_), do: :changeset
+      def __use_changeset__(_, _), do: :changeset
 
-      defoverridable [__use_changeset__: 1]
+      defoverridable [__use_changeset__: 2]
     end
   end
 
@@ -196,7 +196,10 @@ defmodule EctoSchemaStore.ApiProvider do
   end
   defmacro changeset(name, action) when is_atom(action) and is_atom(name) do
     quote do
-      def __use_changeset__(unquote(action)), do: unquote(name)
+      def __use_changeset__(conn, unquote(action)) do
+        override_changeset = conn.assigns[:changeset]
+        override_changeset || unquote(name)
+      end
     end
   end
 end

@@ -6,8 +6,14 @@ defmodule AutoApi.DefaultEncodingPlug do
 
   def init(opts), do: opts
 
-  def call(conn, _opts) do
-    assign conn, :api_encoder, &serialize/1
+  def call(%{assigns: %{api_module: api_module}} = conn, _opts) do
+    if conn.body_params[api_module.singular_name] do
+      conn
+      |> Map.put(:body_params, conn.body_params[api_module.singular_name])
+      |> assign(:api_encoder, &serialize/1)
+    else
+      assign conn, :api_encoder, &serialize/1
+    end    
   end
 
   def serialize(%{assigns: %{errors: errors, error_code: error_code}} = conn) do
@@ -49,7 +55,7 @@ defmodule AutoApi.DefaultEncodingPlug do
   end
   def serialize(%{assigns: %{resource: resource, api_module: api_module}} = conn) do
     singular_name = api_module.singular_name
-    links = api_module.resource_links(conn)
+    links = api_module.resource_links(Map.put(conn, :path_info, [resource[:id]]))
     group_links = api_module.group_links(Map.put(conn, :path_info, []))
     links = Enum.concat group_links, links
 

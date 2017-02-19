@@ -143,11 +143,11 @@ defmodule AutoApi do
   defmacro plugs(do: block) do
     quote do
       plug :preset_values
+      plug :match
+      plug :preload_plug
       plug Plug.Parsers, parsers: [:json],
                         json_decoder: Poison
       unquote(block);
-      plug :match
-      plug :preload_plug
       plug :dispatch
     end
   end
