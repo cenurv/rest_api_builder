@@ -286,7 +286,7 @@ defmodule AutoApi do
 
     link_output =
       quote do
-        group_link unquote(name), unquote(path)
+        group_link unquote(name), to_string(unquote(name))
       end
 
     [output, link_output]
@@ -309,30 +309,54 @@ defmodule AutoApi do
       @group_links :ets.lookup(@link_table, :group)
       @resource_links :ets.lookup(@link_table, :resource)
 
-      def group_links(base_url \\ "") do
-        Enum.map @group_links, fn(entry) ->
-          href =
-            if String.starts_with? elem(entry, 2), "http" do
-              elem(entry, 2)
-            else
-              "#{base_url}#{elem(entry, 2)}"
-            end
+      def group_links(base_url \\ "")
+      def group_links(%Plug.Conn{} = conn) do
+        links =
+          conn
+          |> current_location
+          |> group_links
+      end
+      def group_links(base_url) do
+        links =
+          Enum.map @group_links, fn(entry) ->
+            href =
+              if String.starts_with? elem(entry, 2), "http" do
+                elem(entry, 2)
+              else
+                "#{base_url}#{elem(entry, 2)}"
+              end
 
-          %{name: elem(entry, 1), href: href}
-        end
+            %{name: elem(entry, 1), href: href}
+          end
+
+        Enum.concat links, [
+          %{name: "index", href: base_url}
+        ]
       end
 
-      def resource_links(base_url \\ "") do
-        Enum.map @resource_links, fn(entry) ->
-          href =
-            if String.starts_with? elem(entry, 2), "http" do
-              elem(entry, 2)
-            else
-              "#{base_url}#{elem(entry, 2)}"
-            end
+      def resource_links(base_url \\ "")
+      def resource_links(%Plug.Conn{} = conn) do
+        links =
+          conn
+          |> current_location
+          |> resource_links
+      end
+      def resource_links(base_url) do
+        links =
+          Enum.map @resource_links, fn(entry) ->
+            href =
+              if String.starts_with? elem(entry, 2), "http" do
+                elem(entry, 2)
+              else
+                "#{base_url}#{elem(entry, 2)}"
+              end
 
-          %{name: elem(entry, 1), href: href}
-        end
+            %{name: elem(entry, 1), href: href}
+          end
+        
+        Enum.concat links, [
+          %{name: "self", href: base_url}
+        ]
       end
     end
   end
