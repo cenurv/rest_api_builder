@@ -1,6 +1,6 @@
-defmodule AutoApiTest do
+defmodule RestApiBuilderTest do
   use ExUnit.Case
-  doctest AutoApi
+  doctest RestApiBuilder
 
   test "the truth" do
     assert 1 + 1 == 2

@@ -1,9 +1,9 @@
-defmodule AutoApi.Mixfile do
+defmodule RestApiBuilder.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :auto_api,
-     version: "0.1.0",
+    [app: :rest_api_builder,
+     version: "0.5.0",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,

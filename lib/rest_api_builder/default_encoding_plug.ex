@@ -1,4 +1,4 @@
-defmodule AutoApi.DefaultEncodingPlug do
+defmodule RestApiBuilder.DefaultEncodingPlug do
   @moduledoc """
   A plug that reads and writes the output of a REST resource.
   """

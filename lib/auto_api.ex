@@ -1,6 +1,6 @@
-defmodule AutoApi do
+defmodule RestApiBuilder do
   @moduledoc """
-  Documentation for AutoApi.
+  Documentation for RestApiBuilder.
   """
 
   defmacro __using__(opts) do
@@ -13,11 +13,11 @@ defmodule AutoApi do
       quote do
         use Plug.Router
 
-        import AutoApi
+        import RestApiBuilder
 
         if unquote(default_plugs) do
           plugs do
-            plug AutoApi.DefaultEncodingPlug
+            plug RestApiBuilder.DefaultEncodingPlug
           end
         end
 

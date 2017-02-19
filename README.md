@@ -1,4 +1,4 @@
-# AutoApi
+# RestApiBuilder
 
 **TODO: Add description**
 
