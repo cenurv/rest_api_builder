@@ -139,7 +139,7 @@ Any pipeline of plugs can be applied before forwarding if you would like.
 Any API module can act as a base for other API modules which will utilize the plural name provided in those modules.
 A better example of a real API would be to set up a version collection.
 
-```
+```elixir
 defmodule ApiV1 do
   use RestApiBuilder
 
@@ -168,7 +168,7 @@ By default no REST actions are activated and an eror will be returned if you att
 
 To activate all you can provided a option on the `use` statement.
 
-```
+```elixir
 defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer, activate: :all
 end
@@ -176,7 +176,7 @@ end
 
 Actions can also be activate one at a time.
 
-```
+```elixir
 defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer
 
@@ -190,7 +190,7 @@ end
 
 Or combined into list.
 
-```
+```elixir
 defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer
 
@@ -212,7 +212,7 @@ the `preload` function has done its work if you would like to use the loaded res
 All plugs will be applied at every level of a REST path so any parent resources will have any security checks applied before any children.
 More on children later.
 
-```
+```elixir
 defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer, activate: :all, default_plugs: false
   import Plug.Conn
@@ -328,3 +328,46 @@ defmodule CustomersApi do
   export_links()
 end
 ```
+
+## Children
+
+Similar `include` the children macro will load another REST API module into the path but associated with a resource.
+Providers can then use the parent resource to narrow down the child resources.
+
+```elixir
+# Child Resource
+defmodule MessagesApi do
+  use RestApiBuilder, plural_name: :messages, singular_name: :message, activate: :all
+
+  provider EctoSchemaStore.ApiProvider, store: MessageStore,
+                                        parent: :customer_id
+
+  export_links()
+end
+
+# Parent Resource
+defmodule CustomersApi do
+  use RestApiBuilder, plural_name: :customers, singular_name: :customer
+
+  provider EctoSchemaStore.ApiProvider, store: CustomerStore
+
+  activate :all
+
+  children MessagesApi
+
+  export_links()
+end
+```
+
+The messages resource can be reach via `/api/v2/customers/12/messages` a single child resource could be retrieved
+via `/api/v2/customers/12/messages/37`.
+
+The child resource will be filtered down by the API Provider library based upon the parent. If message 37 existed
+but did not belong to customer 12, then a HTTP 404 would be returned even though the message id is valid. If
+customer 12 did not exist or the user does not have access, then the message would never be looked up and the
+parents error would be returned.
+
+The exact enforcement of relationships is defined by the API provider. If you write your own then you will have to
+define this enforcement and relatioship yourself.
+
+If the relationships are validated, then links will be created for parenbt and children on the current resource.
