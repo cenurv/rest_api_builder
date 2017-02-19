@@ -4,7 +4,10 @@ defmodule EctoSchemaStore.ApiProvider do
   defmacro generate(opts) do
     store = Keyword.get opts, :store, nil
     parent_field = Keyword.get opts, :parent, nil
-    [soft_delete_field, soft_delete_value] = Keyword.get opts, :soft_delete, [:deleted, true]
+    {soft_delete_field, soft_delete_value} = Keyword.get opts, :soft_delete, {:deleted, true}
+    include = Keyword.get opts, :include, []
+    exclude = Keyword.get opts, :exclude, []
+    preload = Keyword.get opts, :preload, []
 
     parent_field =
       if is_binary parent_field do
@@ -23,6 +26,14 @@ defmodule EctoSchemaStore.ApiProvider do
       end
       defp whitelist(model) do
         keys = EctoSchemaStore.Utils.keys unquote(store).schema
+        include = unquote(include)
+        exclude = unquote(exclude)
+
+        keys =
+          keys
+          |> Enum.concat(include)
+          |> Enum.reject(&(&1 in exclude))
+
         Map.take model, keys
       end
 
@@ -35,13 +46,13 @@ defmodule EctoSchemaStore.ApiProvider do
             |> append_exclude_deleted
             |> Keyword.put(parent_field, parent.id)
 
-          unquote(store).all query 
+          unquote(store).all query, preload: unquote(preload) 
         else
-          unquote(store).all append_exclude_deleted([])
+          unquote(store).all append_exclude_deleted([]), preload: unquote(preload) 
         end
       end
       defp fetch_all(conn) do
-        unquote(store).all append_exclude_deleted([])
+        unquote(store).all append_exclude_deleted([]), preload: unquote(preload) 
       end
 
       defp has_field?(field), do: field in unquote(store).schema_fields
@@ -67,9 +78,9 @@ defmodule EctoSchemaStore.ApiProvider do
               |> append_exclude_deleted
               |> Keyword.put(parent_field, parent.id)
 
-            unquote(store).one query 
+            unquote(store).one query, preload: unquote(preload) 
           else
-            unquote(store).one append_exclude_deleted([id: id])
+            unquote(store).one append_exclude_deleted([id: id]), preload: unquote(preload) 
           end
 
         validated =
