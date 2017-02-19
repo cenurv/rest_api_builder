@@ -41,8 +41,9 @@ defmodule RestApiBuilder do
           encoder.(conn)
         end
 
-        defp send_errors(%{assigns: %{api_encoder: encoder}} = conn, errors) do
+        defp send_errors(%{assigns: %{api_encoder: encoder}} = conn, error_code, errors) do
           conn = Plug.Conn.assign(conn, :errors, errors)
+          conn = Plug.Conn.assign(conn, :error_code, error_code)
           encoder.(conn)
         end
 
@@ -250,7 +251,7 @@ defmodule RestApiBuilder do
 
   defmacro feature(name, do: block) do
     quote do
-      feature unquote(name), only: [:post] do
+      feature unquote(name), only: [:get, :post] do
         unquote(block)
       end
     end
@@ -279,7 +280,7 @@ defmodule RestApiBuilder do
 
   defmacro group_feature(name, do: block) do
     quote do
-      group_feature unquote(name), only: [:post] do
+      group_feature unquote(name), only: [:get, :post] do
         unquote(block)
       end
     end
