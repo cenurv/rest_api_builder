@@ -52,7 +52,21 @@ defmodule AutoApi do
         end
 
         defp append_resource(%{assigns: %{resources: resources}} = conn, resource) do
+          references =
+            if conn.assigns[:references] do
+              conn.assigns[:references]
+            else
+              []
+            end
+
+          entry = %{
+            resource: resource,
+            name: singular_name(),
+            href: current_location(conn)
+          }
+
           conn
+          |> assign(:references, Enum.concat(references, [entry]))
           |> assign(:resources, Enum.concat(resources, [{resource, current_location(conn)}]))
         end
         defp append_resource(%{assigns: assigns} = conn, resource) do
@@ -315,6 +329,21 @@ defmodule AutoApi do
           conn
           |> current_location
           |> group_links
+
+        references =
+          if conn.assigns[:references] do
+            conn.assigns[:references]
+          else
+            []
+          end
+
+        references = Enum.reject references, &(&1[:name] == singular_name())
+        other_links =
+          for resource <- references do
+            %{name: resource[:name], href: resource[:href]}
+          end
+        
+        Enum.concat links, other_links
       end
       def group_links(base_url) do
         links =
@@ -336,10 +365,9 @@ defmodule AutoApi do
 
       def resource_links(base_url \\ "")
       def resource_links(%Plug.Conn{} = conn) do
-        links =
-          conn
-          |> current_location
-          |> resource_links
+        conn
+        |> current_location
+        |> resource_links
       end
       def resource_links(base_url) do
         links =

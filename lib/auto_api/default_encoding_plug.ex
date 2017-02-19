@@ -26,6 +26,7 @@ defmodule AutoApi.DefaultEncodingPlug do
     resources =
       for resource <- resources do
         resource_links = api_module.resource_links(Map.put(conn, :path_info, Enum.concat(conn.path_info, [to_string(resource[:id])])))
+        resource_links = Enum.concat links, resource_links
 
         if length(resource_links) > 0 do
           Map.put(resource, :links, prepare_links(resource_links))
