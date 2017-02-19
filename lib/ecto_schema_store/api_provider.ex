@@ -162,7 +162,7 @@ defmodule EctoSchemaStore.ApiProvider do
 
       def __use_changeset__(_, _), do: :changeset
 
-      defoverridable [__use_changeset__: 2]
+      defoverridable [__use_changeset__: 2, index: 1, show: 1, create: 1, update: 1, delete: 1]
     end
   end
 
