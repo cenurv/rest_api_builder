@@ -143,13 +143,28 @@ defmodule RestApiBuilder do
                         group_links: 1, resource_links: 1, group_links: 0, resource_links: 0]
       end
 
+    output =
+      if Code.ensure_compiled?(EventQueues) do
+        events =
+          quote do
+            use EventQueues, type: :announcer
+            require EventQueues
+
+            EventQueues.defevents [:after_insert, :after_update, :after_delete, :before_insert, :before_update, :before_delete]
+          end
+
+        [output, events]
+      else
+        output
+      end
+
     if activate do
       activate_output =
         quote do
           activate unquote(activate)
         end
 
-      [output, activate_output]
+      List.flatten [output, activate_output]
     else
       output
     end

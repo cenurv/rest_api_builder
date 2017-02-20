@@ -19,7 +19,7 @@ end
 All API routers are based upon `Plug.Router` and may be included into any standard `Plug.Router` path
 or forwarded to in a Phoenix Router definition.
 
-In a APi Router the floowing paths are built in:
+In a API module the following paths are built in:
 
 * index      - `GET /`
 * create     - `POST /`
@@ -203,7 +203,7 @@ end
 ## Plugs
 
 Since a REST API module is based upon Plug Router, it predefines plugs that facilitate its functionality.
-to append your own plugs, you must tell the library to allow for custom plugs.
+To append your own plugs, you must tell the library to allow for custom plugs.
 
 Although you could use the plug statment directly, it would never fire since the :dispatcher plug will have already fired.
 The plugs command is provided to allow you to drop your plugs into the middle of the process. Your plugs will fire after
@@ -270,7 +270,7 @@ Custom links can also be added using `group_link` and `link`.
 
 ## Plug Router Matching
 
-You can provide Plug Router level matching since Plug,Router is imported into the API module. You nned to make sure you
+You can provide Plug Router level matching since Plug,Router is imported into the API module. You need to make sure you
 activate any REST actions after the custom matching or the the REST actions may pre-empt the path.
 
 ```elixir
@@ -371,3 +371,55 @@ The exact enforcement of relationships is defined by the API provider. If you wr
 define this enforcement and relatioship yourself.
 
 If the relationships are validated, then links will be created for parenbt and children on the current resource.
+
+## Modifying Actions
+
+If the provider allows, then the actions can be overloaded in your code. This will allow you to perform some action before or
+after the provider's default action.
+
+```elixir
+defmodule CustomersApi do
+  use RestApiBuilder, plural_name: :customers, singular_name: :customer, activate: :all
+
+  provider EctoSchemaStore.ApiProvider, store: CustomerStore
+
+  def create(conn) do
+    # Do some action before the resource is created by the provider.
+    
+    conn = super(conn)
+
+    # Do some action after the resource is created by the provider.
+
+    conn
+  end
+end
+```
+
+## Event Announcements ##
+
+An API module supports the concept of an event through the [Event Queues](https://hex.pm/packages/event_queues) library on Hex.
+Event Queues must be included in your application and each queue and handler added to your application supervisor. Visit
+the instructions at (https://hexdocs.pm/event_queues) for more details.
+
+Events:
+
+* `:after_create`
+* `:after_update`
+* `:after_delete`
+
+Macros:
+
+* `create_queue`               - Creates a Queue for instances where one is not already set up. Accessible at {api module name}.Queue
+* `announces`                  - Register a what events to announce and what modules to send the event. By default will use {api module name}.Queue
+
+```elixir
+defmodule CustomersApi do
+  use RestApiBuilder, plural_name: :customers, singular_name: :customer, activate: :all
+
+  provider EctoSchemaStore.ApiProvider, store: CustomerStore
+
+  create_queue()
+
+  announces events: [:after_create, :after_update, :after_delete]
+end
+```
