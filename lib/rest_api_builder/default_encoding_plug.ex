@@ -17,7 +17,9 @@ defmodule RestApiBuilder.DefaultEncodingPlug do
   end
 
   def serialize(%{assigns: %{errors: errors, error_code: error_code}} = conn) do
-    send_resp conn, error_code, Poison.encode!(%{errors: errors})
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(error_code, Poison.encode!(%{errors: errors}))
   end
   def serialize(%{assigns: %{resource: resources, api_module: api_module}} = conn) when is_list resources do
     plural_name = api_module.plural_name

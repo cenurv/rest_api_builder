@@ -15,6 +15,11 @@ defmodule RestApiBuilder do
 
         import RestApiBuilder
 
+        use EventQueues, type: :announcer
+        require EventQueues
+
+        EventQueues.defevents [:after_create, :after_update, :after_delete]
+
         if unquote(default_plugs) do
           plugs do
             plug RestApiBuilder.DefaultEncodingPlug
@@ -143,20 +148,6 @@ defmodule RestApiBuilder do
                         group_links: 1, resource_links: 1, group_links: 0, resource_links: 0]
       end
 
-    output =
-      if Code.ensure_compiled?(EventQueues) do
-        events =
-          quote do
-            use EventQueues, type: :announcer
-            require EventQueues
-
-            EventQueues.defevents [:after_insert, :after_update, :after_delete, :before_insert, :before_update, :before_delete]
-          end
-
-        [output, events]
-      else
-        output
-      end
 
     if activate do
       activate_output =
@@ -164,7 +155,7 @@ defmodule RestApiBuilder do
           activate unquote(activate)
         end
 
-      List.flatten [output, activate_output]
+      [output, activate_output]
     else
       output
     end
@@ -213,25 +204,49 @@ defmodule RestApiBuilder do
   defmacro activate(:create) do
     quote do
       post "/" do
-        create var!(conn)
+        conn = create var!(conn)
+
+        if conn.assigns[:resource] && has_after_create?() do
+          on_after_create category: singular_name(), name: :create, data: conn.assigns[:resource]
+        end
+
+        conn
       end
     end
   end
   defmacro activate(:update) do
     quote do
       put "/:id" do
-        update var!(conn)
+        conn = update var!(conn)
+
+        if conn.assigns[:resource] && has_after_update?() do
+          on_after_create category: singular_name(), name: :update, data: conn.assigns[:resource]
+        end
+
+        conn
       end
 
       patch "/:id" do
-        update var!(conn)
+        conn = update var!(conn)
+
+        if conn.assigns[:resource] && has_after_update?() do
+          on_after_create category: singular_name(), name: :update, data: conn.assigns[:resource]
+        end
+
+        conn
       end
     end
   end
   defmacro activate(:delete) do
     quote do
       delete "/:id" do
-        delete var!(conn)
+        conn = delete var!(conn)
+
+        if conn.status == 204 && conn.assigns[:current] && has_after_delete?() do
+          on_after_create category: singular_name(), name: :delete, data: conn.assigns[:current]
+        end
+
+        conn
       end
     end
   end
