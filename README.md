@@ -421,5 +421,26 @@ defmodule CustomersApi do
   create_queue()
 
   announces events: [:after_create, :after_update, :after_delete]
+
+  defmodule Handler do
+    use EventQueues, type: :handler, subscribe: SampleApi.Apis.UsersApi.Queue
+
+    def handle(event) do
+      IO.inspect event
+    end
+  end
 end
+```
+
+The event queue and any handlers must be started as part of the application.
+
+```elixir
+# Start the event queue and handler.
+CustomersApi.Queue.start_link
+CustomersApi.Handler.start_link
+
+# As part of the App supervisor
+worker(CustomersApi.Queue, []),
+worker(CustomersApi.Handler, [])
+
 ```
