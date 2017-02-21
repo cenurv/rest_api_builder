@@ -17,9 +17,14 @@ defmodule RestApiBuilder.DefaultEncodingPlug do
   end
 
   def serialize(%{assigns: %{errors: errors, error_code: error_code}} = conn) do
-    conn
-    |> put_resp_content_type("application/json")
-    |> send_resp(error_code, Poison.encode!(%{errors: errors}))
+    if conn.assigns[:direct_execute] do
+      conn
+      |> send_resp(error_code, "")
+    else
+      conn
+      |> put_resp_content_type("application/json")
+      |> send_resp(error_code, Poison.encode!(%{errors: errors}))
+    end
   end
   def serialize(%{assigns: %{resource: resources, api_module: api_module}} = conn) when is_list resources do
     plural_name = api_module.plural_name
@@ -48,9 +53,14 @@ defmodule RestApiBuilder.DefaultEncodingPlug do
         response
       end
 
-    conn
-    |> put_resp_content_type("application/json")
-    |> send_resp(success_code(conn), Poison.encode!(response))
+    if conn.assigns[:direct_execute] do
+      conn
+      |> send_resp(success_code(conn), "")
+    else
+      conn
+      |> put_resp_content_type("application/json")
+      |> send_resp(success_code(conn), Poison.encode!(response))
+    end
   end
   def serialize(%{assigns: %{resource: nil}} = conn) do
     conn
@@ -73,9 +83,14 @@ defmodule RestApiBuilder.DefaultEncodingPlug do
       %{}
       |> Map.put(singular_name, resource)
 
-    conn
-    |> put_resp_content_type("application/json")
-    |> send_resp(success_code(conn), Poison.encode!(response))
+    if conn.assigns[:direct_execute] do
+      conn
+      |> send_resp(success_code(conn), "")
+    else
+      conn
+      |> put_resp_content_type("application/json")
+      |> send_resp(success_code(conn), Poison.encode!(response))
+    end
   end
 
   defp prepare_links(links, acc \\ %{})

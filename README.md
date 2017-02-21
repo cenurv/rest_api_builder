@@ -4,7 +4,7 @@ This library helps to create Plug compatible Rest API routers that can be manual
 
 ## Provider Implementations
 
-* `ecto_schema_store`               - Implements a resource provider based upon a single Ecto Schema.
+* [rest_api_builder_essp](https://hex.pm/packages/rest_api_builder_essp) - Implements a resource provider based upon the [Ecto Schema Store](https://hex.pm/packages/ecto_schema_store) library.
 
 ## Installation
 
@@ -111,7 +111,7 @@ This library provides a macro to load a provider module into your API.
 defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer, activate: :all
 
-  provider EctoSchemaStore.ApiProvider, store: CustomerStore
+  provider RestApiBuilder.EctoSchemaStoreProvider, store: CustomerStore
 end
 ```
 
@@ -217,7 +217,7 @@ defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer, activate: :all, default_plugs: false
   import Plug.Conn
 
-  provider EctoSchemaStore.ApiProvider, store: CustomerStore
+  provider RestApiBuilder.EctoSchemaStoreProvider, store: CustomerStore
 
   plugs do
     if Mix.env == :dev do
@@ -254,7 +254,7 @@ Links exist for both the entire resource group and for individual resources.
 defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer
 
-  provider EctoSchemaStore.ApiProvider, store: CustomerStore
+  provider RestApiBuilder.EctoSchemaStoreProvider, store: CustomerStore
 
   group_link :google, "http://www.google.com"
   link :author, "/author"
@@ -278,7 +278,7 @@ defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer
   import Plug.Conn
 
-  provider EctoSchemaStore.ApiProvider, store: CustomerStore
+  provider RestApiBuilder.EctoSchemaStoreProvider, store: CustomerStore
 
   post "/my_action" do
     conn
@@ -311,7 +311,7 @@ defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer
   import Plug.Conn
 
-  provider EctoSchemaStore.ApiProvider, store: CustomerStore
+  provider RestApiBuilder.EctoSchemaStoreProvider, store: CustomerStore
 
   group_feature :my_action do
     conn
@@ -339,7 +339,7 @@ Providers can then use the parent resource to narrow down the child resources.
 defmodule MessagesApi do
   use RestApiBuilder, plural_name: :messages, singular_name: :message, activate: :all
 
-  provider EctoSchemaStore.ApiProvider, store: MessageStore,
+  provider RestApiBuilder.EctoSchemaStoreProvider, store: MessageStore,
                                         parent: :customer_id
 
   export_links()
@@ -349,7 +349,7 @@ end
 defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer
 
-  provider EctoSchemaStore.ApiProvider, store: CustomerStore
+  provider RestApiBuilder.EctoSchemaStoreProvider, store: CustomerStore
 
   activate :all
 
@@ -381,7 +381,7 @@ after the provider's default action.
 defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer, activate: :all
 
-  provider EctoSchemaStore.ApiProvider, store: CustomerStore
+  provider RestApiBuilder.EctoSchemaStoreProvider, store: CustomerStore
 
   def create(conn) do
     # Do some action before the resource is created by the provider.
@@ -416,7 +416,7 @@ Macros:
 defmodule CustomersApi do
   use RestApiBuilder, plural_name: :customers, singular_name: :customer, activate: :all
 
-  provider EctoSchemaStore.ApiProvider, store: CustomerStore
+  provider RestApiBuilder.EctoSchemaStoreProvider, store: CustomerStore
 
   create_queue()
 

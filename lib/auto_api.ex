@@ -12,7 +12,6 @@ defmodule RestApiBuilder do
     output =
       quote do
         use Plug.Router
-
         import RestApiBuilder
 
         use EventQueues, type: :announcer
@@ -417,6 +416,13 @@ defmodule RestApiBuilder do
           %{name: "self", href: base_url}
         ]
       end
+    end
+  end
+
+  defmacro direct_access do
+    quote do
+      require RestApiBuilder.Direct
+      RestApiBuilder.Direct.generate()
     end
   end
 end
