@@ -6,11 +6,10 @@ defmodule RestApiBuilder.DirectAccessPlug do
 
   def init(opts), do: opts
 
-  def call(%{assigns: %{direct_access: true}, method: method} = conn, _opts) when method in [:post, :put, :patch] do
-    Map.put conn, :body_params, conn.params
-  end
-  def call(%{assigns: %{direct_access: true}, method: method} = conn, _opts) when method in [:get, :delete] do
-    Map.put conn, :query_params, conn.params
+  def call(%{assigns: %{direct_access: true}, method: method} = conn, _opts) do
+    conn
+    |> Map.put(:query_params, conn.params)
+    |> Map.put(:body_params, conn.params)
   end
   def call(conn, _opts), do: conn
 

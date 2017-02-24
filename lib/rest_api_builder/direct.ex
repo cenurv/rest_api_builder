@@ -31,152 +31,6 @@ defmodule RestApiBuilder.Direct do
       end
 
       @doc """
-      Will get a resource.
-
-      Options
-
-      * `params`        - Will set the params on Plug.Conn.
-      * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
-      * `headers`       - Map or list of tuples with headers.
-      """
-      def get(path \\ "/", opts \\ []) do
-        process :get, path, opts
-      end
-
-      @doc """
-      Will get a resource.
-
-      Options
-
-      * `params`        - Will set the params on Plug.Conn.
-      * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
-      * `headers`       - Map or list of tuples with headers.
-      """
-      def get!(path \\ "/", opts \\ []) do
-        case get path, opts do
-          {:error, errors} -> throw errors
-          {:ok, resource} -> resource
-        end
-      end
-
-      @doc """
-      Will post a resource.
-
-      Options
-
-      * `params`        - Will set the params on Plug.Conn.
-      * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
-      * `headers`       - Map or list of tuples with headers.
-      """
-      def post(path \\ "/", opts \\ []) do
-        process :post, path, opts
-      end
-
-      @doc """
-      Will post a resource.
-
-      Options
-
-      * `params`        - Will set the params on Plug.Conn.
-      * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
-      * `headers`       - Map or list of tuples with headers.
-      """
-      def post!(path \\ "/", opts \\ []) do
-        case post path, opts do
-          {:error, errors} -> throw errors
-          {:ok, resource} -> resource
-        end
-      end
-
-      @doc """
-      Will put a resource.
-
-      Options
-
-      * `params`        - Will set the params on Plug.Conn.
-      * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
-      * `headers`       - Map or list of tuples with headers.
-      """
-      def put(path \\ "/", opts \\ []) do
-        process :put, path, opts
-      end
-
-      @doc """
-      Will put a resource.
-
-      Options
-
-      * `params`        - Will set the params on Plug.Conn.
-      * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
-      * `headers`       - Map or list of tuples with headers.
-      """
-      def put!(path \\ "/", opts \\ []) do
-        case put path, opts do
-          {:error, errors} -> throw errors
-          {:ok, resource} -> resource
-        end
-      end
-
-
-      @doc """
-      Will patch a resource.
-
-      Options
-
-      * `params`        - Will set the params on Plug.Conn.
-      * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
-      * `headers`       - Map or list of tuples with headers.
-      """
-      def patch(path \\ "/", opts \\ []) do
-        process :patch, path, opts
-      end
-
-      @doc """
-      Will patch a resource.
-
-      Options
-
-      * `params`        - Will set the params on Plug.Conn.
-      * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
-      * `headers`       - Map or list of tuples with headers.
-      """
-      def patch!(path \\ "/", opts \\ []) do
-        case patch path, opts do
-          {:error, errors} -> throw errors
-          {:ok, resource} -> resource
-        end
-      end
-
-      @doc """
-      Will delete a resource.
-
-      Options
-
-      * `params`        - Will set the params on Plug.Conn.
-      * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
-      * `headers`       - Map or list of tuples with headers.
-      """
-      def delete(path \\ "/", opts \\ []) do
-        process :delete, path, opts
-      end
-
-      @doc """
-      Will delete a resource.
-
-      Options
-
-      * `params`        - Will set the params on Plug.Conn.
-      * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
-      * `headers`       - Map or list of tuples with headers.
-      """
-      def delete!(path \\ "/", opts \\ []) do
-        case delete path, opts do
-          {:error, errors} -> throw errors
-          {:ok, resource} -> resource
-        end
-      end
-
-      @doc """
       Will create a resource.
 
       Options
@@ -185,7 +39,7 @@ defmodule RestApiBuilder.Direct do
       * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
       * `headers`       - Map or list of tuples with headers.
       """
-      def create(path \\ "/", opts \\ []) do
+      def run_create(path \\ "/", opts \\ []) do
         process :post, path, opts
       end
 
@@ -198,8 +52,8 @@ defmodule RestApiBuilder.Direct do
       * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
       * `headers`       - Map or list of tuples with headers.
       """
-      def create!(path \\ "/", opts \\ []) do
-        case create path, opts do
+      def run_create!(path \\ "/", opts \\ []) do
+        case run_create path, opts do
           {:error, errors} -> throw errors
           {:ok, resource} -> resource
         end
@@ -214,7 +68,7 @@ defmodule RestApiBuilder.Direct do
       * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
       * `headers`       - Map or list of tuples with headers.
       """
-      def index(path \\ "/", opts \\ []) do
+      def run_index(path \\ "/", opts \\ []) do
         process :get, path, opts
       end
 
@@ -227,8 +81,8 @@ defmodule RestApiBuilder.Direct do
       * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
       * `headers`       - Map or list of tuples with headers.
       """
-      def index(path \\ "/", opts \\ []) do
-        case index path, opts do
+      def run_index!(path \\ "/", opts \\ []) do
+        case run_index path, opts do
           {:error, errors} -> throw errors
           {:ok, resource} -> resource
         end
@@ -243,7 +97,7 @@ defmodule RestApiBuilder.Direct do
       * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
       * `headers`       - Map or list of tuples with headers.
       """
-      def show(path, opts \\ []) do
+      def run_show(path, opts \\ []) do
         process :get, path, opts
       end
 
@@ -256,8 +110,8 @@ defmodule RestApiBuilder.Direct do
       * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
       * `headers`       - Map or list of tuples with headers.
       """
-      def show!(path, opts \\ []) do
-        case show path, opts do
+      def run_show!(path, opts \\ []) do
+        case run_show path, opts do
           {:error, errors} -> throw errors
           {:ok, resource} -> resource
         end
@@ -272,7 +126,7 @@ defmodule RestApiBuilder.Direct do
       * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
       * `headers`       - Map or list of tuples with headers.
       """
-      def update(path, opts \\ []) do
+      def run_update(path, opts \\ []) do
         process :put, path, opts
       end
 
@@ -285,8 +139,8 @@ defmodule RestApiBuilder.Direct do
       * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
       * `headers`       - Map or list of tuples with headers.
       """
-      def update(path, opts \\ []) do
-        case update path, opts do
+      def run_update!(path, opts \\ []) do
+        case run_update path, opts do
           {:error, errors} -> throw errors
           {:ok, resource} -> resource
         end
@@ -302,7 +156,7 @@ defmodule RestApiBuilder.Direct do
       * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
       * `headers`       - Map or list of tuples with headers.
       """
-      def delete(path, opts \\ []) do
+      def run_delete(path, opts \\ []) do
         process :delete, path, opts
       end
 
@@ -315,8 +169,8 @@ defmodule RestApiBuilder.Direct do
       * `assigns`       - Will set values on the assigns of the Plug.Conn passed in.
       * `headers`       - Map or list of tuples with headers.
       """
-      def delete(path, opts \\ []) do
-        case delete path, opts do
+      def run_delete!(path, opts \\ []) do
+        case run_delete path, opts do
           {:error, errors} -> throw errors
           {:ok, resource} -> resource
         end

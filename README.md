@@ -451,12 +451,13 @@ via other application code, the Plug.Conn being passed contains the `:direct_acc
 
 Direct access does not consume JSON text or generate the JSON response. These translations are skipped over as that
 converting to JSON and back provides no advantage internally. Therefore, you may receive a more complete resource
-from direct access then you would get as an HTTP call. For the Ecto Schema Store Provider, this will result in
-a normal Ecto model being returned where as over the web you would get a generalized map version.
+from direct access then you would get as an HTTP call.
 
 Execute process:
 
 `process(http_method, path, opts)` or `process!(http_method, path, opts)`
+
+The http_method can be `:get`, `:post`, `:put`, `:patch`, or `:delete`.
 
 Options:
 
@@ -464,20 +465,15 @@ Options:
 * `assigns`       - Will set values on the assigns of the Plug.Conn passed in. Keyword list or map.
 * `headers`       - Map or list of tuples with headers.
 
-The following convience methods can be used.
+The following convience methods can be used to access the standard REST paths.
 
 Functions:
 
-* index, index!
-* show, show!
-* create, create!
-* update, update!
-* delete, delete!
-* get, get!
-* post, post!
-* put, put!
-* patch, patch!
-* delete, delete!
+* run_index, run_index!
+* run_show, run_show!
+* run_create, run_create!
+* run_update, run_update!
+* run_delete, run_delete!
 
 All functions share the same parameters `(path, opts)`.
 
@@ -485,12 +481,13 @@ The path is always relative to the API module you are directly calling on.
 
 ```elixir
 # Equivalent paths
-{:ok, customers} = ApiV1.index "/customers"
-{:ok, customers} = CustomersApi.index "/"
+{:ok, customers} = ApiV1.process :get, "/customers"
+{:ok, customers} = ApiV1.run_index "/customers"
+{:ok, customers} = CustomersApi.run_index "/"
 
 # Submitting resource
-{:ok, customer} = ApiV1.create "/customers", params: %{name: "Bob Person"}
-customer = ApiV1.create! "/customers", params: %{name: "Bob Person"}
+{:ok, customer} = ApiV1.run_create "/customers", params: %{name: "Bob Person"}
+customer = ApiV1.run_create! "/customers", params: %{name: "Bob Person"}
 ```
 
 Direct Access can be used to build an internal api. This will allow you to use your REST API as a traditional API.
@@ -498,15 +495,15 @@ Direct Access can be used to build an internal api. This will allow you to use y
 ```elixir
 defmodule InternalApi do
   def list_customers do
-    ApiV1.index! "/customers"
+    ApiV1.run_index! "/customers"
   end
 
   def create_customer(name) do
-    ApiV1.create "/customers", params: %{name: name}
+    ApiV1.run_create "/customers", params: %{name: name}
   end
 
   def create_customer!(name) do
-    ApiV1.create! "/customers", params: %{name: name}
+    ApiV1.run_create! "/customers", params: %{name: name}
   end
 end
 ```
@@ -524,7 +521,7 @@ defmodule CustomersApiTest do
   use MyApp.ConnCase
 
   test "Test Creating a Customer" do
-    customer = ApiV1.create! "/customers", params: %{name: "Bob Person"}
+    customer = ApiV1.run_create! "/customers", params: %{name: "Bob Person"}
     assert "Bob Person" == customer.name
   end
 
