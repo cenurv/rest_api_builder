@@ -121,7 +121,7 @@ defmodule RestApiBuilder do
 
         def preload_plug(%Plug.Conn{params: %{"id" => id}, path_info: path_info} = conn, _opts) 
                             when path_info != [] do
-          preload conn
+          handle_preload conn
         end
         def preload_plug(conn, _opts) do
           conn
@@ -133,18 +133,21 @@ defmodule RestApiBuilder do
           |> send_resp(501, "Not yet implemented.")
         end
 
-        def preload(conn), do: conn
-        def index(conn), do: __not_ready__ conn
-        def show(conn), do: __not_ready__ conn
-        def create(conn), do: __not_ready__ conn
-        def update(conn), do: __not_ready__ conn
-        def delete(conn), do: __not_ready__ conn
+        def handle_preload(conn), do: conn
+        def handle_index(conn), do: __not_ready__ conn
+        def handle_show(conn), do: __not_ready__ conn
+        def handle_create(conn), do: __not_ready__ conn
+        def handle_update(conn), do: __not_ready__ conn
+        def handle_delete(conn), do: __not_ready__ conn
 
         def group_links(_base_url \\ ""), do: []
         def resource_links(_base_url \\ ""), do: []
 
-        defoverridable [index: 1, show: 1, create: 1, update: 1, delete: 1, preload: 1,
-                        group_links: 1, resource_links: 1, group_links: 0, resource_links: 0]
+        defoverridable [handle_index: 1, handle_show: 1, handle_create: 1, handle_update: 1,
+                        handle_delete: 1, handle_preload: 1, group_links: 1, resource_links: 1,
+                        group_links: 0, resource_links: 0]
+
+        direct_access()
       end
 
 
@@ -162,11 +165,10 @@ defmodule RestApiBuilder do
 
   defmacro plugs(do: block) do
     quote do
+      plug RestApiBuilder.DirectAccessPlug
       plug :preset_values
       plug :match
       plug :preload_plug
-      plug Plug.Parsers, parsers: [:json],
-                        json_decoder: Poison
       unquote(block);
       plug :dispatch
     end
@@ -189,21 +191,21 @@ defmodule RestApiBuilder do
   defmacro activate(:index) do
     quote do
       get "/" do
-        index var!(conn)
+        handle_index var!(conn)
       end
     end
   end
   defmacro activate(:show) do
     quote do
       get "/:id" do
-        show var!(conn)
+        handle_show var!(conn)
       end
     end
   end
   defmacro activate(:create) do
     quote do
       post "/" do
-        conn = create var!(conn)
+        conn = handle_create var!(conn)
 
         if conn.assigns[:resource] && has_after_create?() do
           on_after_create category: singular_name(), name: :create, data: conn.assigns[:resource]
@@ -216,7 +218,7 @@ defmodule RestApiBuilder do
   defmacro activate(:update) do
     quote do
       put "/:id" do
-        conn = update var!(conn)
+        conn = handle_update var!(conn)
 
         if conn.assigns[:resource] && has_after_update?() do
           on_after_create category: singular_name(), name: :update, data: conn.assigns[:resource]
@@ -226,7 +228,7 @@ defmodule RestApiBuilder do
       end
 
       patch "/:id" do
-        conn = update var!(conn)
+        conn = handle_update var!(conn)
 
         if conn.assigns[:resource] && has_after_update?() do
           on_after_create category: singular_name(), name: :update, data: conn.assigns[:resource]
@@ -239,7 +241,7 @@ defmodule RestApiBuilder do
   defmacro activate(:delete) do
     quote do
       delete "/:id" do
-        conn = delete var!(conn)
+        conn = handle_delete var!(conn)
 
         if conn.status == 204 && conn.assigns[:current] && has_after_delete?() do
           on_after_create category: singular_name(), name: :delete, data: conn.assigns[:current]

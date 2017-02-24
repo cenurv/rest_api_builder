@@ -10,7 +10,7 @@ This library helps to create Plug compatible Rest API routers that can be manual
 
 ```elixir
 def deps do
-  [{:rest_api_builder, "~> 0.5.0"}]
+  [{:rest_api_builder, "~> 0.6"}]
 end
 ```
 
@@ -34,31 +34,31 @@ defmodule CustomersApi do
 
   # Called before a specific resource is loaded on show, update, or delete.
   # You will generally want to set the value into Plug.Conn.assigns
-  def preload(%Plug.Conn{path_params: %{"id" => id}, assigns: assigns} = conn) do
+  def handle_preload(%Plug.Conn{path_params: %{"id" => id}, assigns: assigns} = conn) do
     assign(conn, :resource, %{id: id})
   end
 
-  def index(conn) do
+  def handle_index(conn) do
     # Will send back a 200 status with the resource in the body as JSON.
     send_resource conn, [%{id: 1}, %{id: 2}]
   end
 
-  def create(conn) do
+  def handle_create(conn) do
     # Will send back a 201 status with the resource in the body as JSON.
     send_resource conn, %{id: 3}
   end
 
-  def show(%Plug.Conn{assigns: %{resource: resource}} = conn) do
+  def handle_show(%Plug.Conn{assigns: %{resource: resource}} = conn) do
     # Will send back a 200 status with the resource in the body as JSON.
     send_resource conn, resource
   end
 
-  def update(%Plug.Conn{assigns: %{resource: resource}} = conn) do
+  def handle_update(%Plug.Conn{assigns: %{resource: resource}} = conn) do
     # Will send back a 403 status with an errors JSON body containing the content provided.
     send_errors conn, 403, "Cannot update resource"
   end
 
-  def delete(%Plug.Conn{assigns: %{resource: resource}} = conn) do
+  def handle_delete(%Plug.Conn{assigns: %{resource: resource}} = conn) do
     # Will send back a 204 status with no content.
     send_resource conn, nil
   end
@@ -383,7 +383,7 @@ defmodule CustomersApi do
 
   provider RestApiBuilder.EctoSchemaStoreProvider, store: CustomerStore
 
-  def create(conn) do
+  def handle_create(conn) do
     # Do some action before the resource is created by the provider.
     
     conn = super(conn)
@@ -442,5 +442,99 @@ CustomersApi.Handler.start_link
 # As part of the App supervisor
 worker(CustomersApi.Queue, []),
 worker(CustomersApi.Handler, [])
+```
 
+## Direct Access ##
+
+The API can be accessed internally to your application without needing to make an HTTP call. When directly accessed
+via other application code, the Plug.Conn being passed contains the `:direct_access` value in `assigns` set to `true`.
+
+Direct access does not consume JSON text or generate the JSON response. These translations are skipped over as that
+converting to JSON and back provides no advantage internally. Therefore, you may receive a more complete resource
+from direct access then you would get as an HTTP call. For the Ecto Schema Store Provider, this will result in
+a normal Ecto model being returned where as over the web you would get a generalized map version.
+
+Execute process:
+
+`process(http_method, path, opts)` or `process!(http_method, path, opts)`
+
+Options:
+
+* `params`        - Will set the params on Plug.Conn. Keyword list or map.
+* `assigns`       - Will set values on the assigns of the Plug.Conn passed in. Keyword list or map.
+* `headers`       - Map or list of tuples with headers.
+
+The following convience methods can be used.
+
+Functions:
+
+* index, index!
+* show, show!
+* create, create!
+* update, update!
+* delete, delete!
+* get, get!
+* post, post!
+* put, put!
+* patch, patch!
+* delete, delete!
+
+All functions share the same parameters `(path, opts)`.
+
+The path is always relative to the API module you are directly calling on.
+
+```elixir
+# Equivalent paths
+{:ok, customers} = ApiV1.index "/customers"
+{:ok, customers} = CustomersApi.index "/"
+
+# Submitting resource
+{:ok, customer} = ApiV1.create "/customers", params: %{name: "Bob Person"}
+customer = ApiV1.create! "/customers", params: %{name: "Bob Person"}
+```
+
+Direct Access can be used to build an internal api. This will allow you to use your REST API as a traditional API.
+
+```elixir
+defmodule InternalApi do
+  def list_customers do
+    ApiV1.index! "/customers"
+  end
+
+  def create_customer(name) do
+    ApiV1.create "/customers", params: %{name: name}
+  end
+
+  def create_customer!(name) do
+    ApiV1.create! "/customers", params: %{name: name}
+  end
+end
+```
+
+When designing plugs, you will want to consider both web access and direct access and may want alternate functionality or
+less security when the `:direct_access` value is present in assigns.
+
+## Testing ##
+
+Any API module can be tested using `Plug.Test` or the direct access methods directly on the modules. You can also
+perform controller style tests like you would normally when using Phoenix Framework.
+
+```elixir
+defmodule CustomersApiTest do
+  use MyApp.ConnCase
+
+  test "Test Creating a Customer" do
+    customer = ApiV1.create! "/customers", params: %{name: "Bob Person"}
+    assert "Bob Person" == customer.name
+  end
+
+  test "Test Creating a Customer using Test Conn", %{conn: conn} do
+    response =
+      conn
+      |> post("/api/v1/customers", %{customer: %{name: "Bob"}})
+      |> json_response(201)
+
+    assert "Bob Person" == response["customer"]["name"]
+  end
+end
 ```

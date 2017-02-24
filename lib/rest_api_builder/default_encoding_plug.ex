@@ -17,7 +17,7 @@ defmodule RestApiBuilder.DefaultEncodingPlug do
   end
 
   def serialize(%{assigns: %{errors: errors, error_code: error_code}} = conn) do
-    if conn.assigns[:direct_execute] do
+    if conn.assigns[:direct_access] do
       conn
       |> send_resp(error_code, "")
     else
@@ -53,7 +53,7 @@ defmodule RestApiBuilder.DefaultEncodingPlug do
         response
       end
 
-    if conn.assigns[:direct_execute] do
+    if conn.assigns[:direct_access] do
       conn
       |> send_resp(success_code(conn), "")
     else
@@ -83,7 +83,7 @@ defmodule RestApiBuilder.DefaultEncodingPlug do
       %{}
       |> Map.put(singular_name, resource)
 
-    if conn.assigns[:direct_execute] do
+    if conn.assigns[:direct_access] do
       conn
       |> send_resp(success_code(conn), "")
     else
