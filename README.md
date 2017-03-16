@@ -372,29 +372,6 @@ define this enforcement and relatioship yourself.
 
 If the relationships are validated, then links will be created for parenbt and children on the current resource.
 
-## Modifying Actions
-
-If the provider allows, then the actions can be overloaded in your code. This will allow you to perform some action before or
-after the provider's default action.
-
-```elixir
-defmodule CustomersApi do
-  use RestApiBuilder, plural_name: :customers, singular_name: :customer, activate: :all
-
-  provider RestApiBuilder.EctoSchemaStoreProvider, store: CustomerStore
-
-  def handle_create(conn) do
-    # Do some action before the resource is created by the provider.
-    
-    conn = super(conn)
-
-    # Do some action after the resource is created by the provider.
-
-    conn
-  end
-end
-```
-
 ## Event Announcements ##
 
 An API module supports the concept of an event through the [Event Queues](https://hex.pm/packages/event_queues) library on Hex.
