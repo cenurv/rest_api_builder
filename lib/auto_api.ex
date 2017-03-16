@@ -56,7 +56,7 @@ defmodule RestApiBuilder do
           "#{conn.scheme}://#{Plug.Conn.get_req_header(conn, "host")}/#{current_path}"
         end
 
-        defp append_resource(%{assigns: %{resources: resources}} = conn, resource) do
+        def append_resource(%{assigns: %{resources: resources}} = conn, resource) do
           references =
             if conn.assigns[:references] do
               conn.assigns[:references]
@@ -74,7 +74,7 @@ defmodule RestApiBuilder do
           |> assign(:references, Enum.concat(references, [entry]))
           |> assign(:resources, Enum.concat(resources, [{resource, current_location(conn)}]))
         end
-        defp append_resource(%{assigns: assigns} = conn, resource) do
+        def append_resource(%{assigns: assigns} = conn, resource) do
           append_resource Plug.Conn.assign(conn, :resources, []), resource
         end
 
@@ -121,7 +121,7 @@ defmodule RestApiBuilder do
 
         def preload_plug(%Plug.Conn{params: %{"id" => id}, path_info: path_info} = conn, _opts) 
                             when path_info != [] do
-          handle_preload conn
+          provider().handle_preload conn, __MODULE__, provider_opts()
         end
         def preload_plug(conn, _opts) do
           conn
@@ -133,20 +133,14 @@ defmodule RestApiBuilder do
           |> send_resp(501, "Not yet implemented.")
         end
 
-        def handle_preload(conn), do: conn
-        def handle_index(conn), do: __not_ready__ conn
-        def handle_show(conn), do: __not_ready__ conn
-        def handle_update(conn), do: __not_ready__ conn
-
         def group_links(_base_url \\ ""), do: []
         def resource_links(_base_url \\ ""), do: []
 
         def provider_opts, do: []
         def provider, do: nil
 
-        defoverridable [handle_index: 1, handle_show: 1, handle_update: 1,
-                        handle_preload: 1, group_links: 1, resource_links: 1,
-                        group_links: 0, resource_links: 0, provider_opts: 0, provider: 0]
+        defoverridable [group_links: 1, resource_links: 1, group_links: 0,
+                        resource_links: 0, provider_opts: 0, provider: 0]
 
         direct_access()
       end
@@ -192,14 +186,14 @@ defmodule RestApiBuilder do
   defmacro activate(:index) do
     quote do
       get "/" do
-        handle_index var!(conn)
+        conn = provider().handle_index var!(conn), __MODULE__, provider_opts()
       end
     end
   end
   defmacro activate(:show) do
     quote do
       get "/:id" do
-        handle_show var!(conn)
+        conn = provider().handle_show var!(conn), __MODULE__, provider_opts()
       end
     end
   end
@@ -219,7 +213,7 @@ defmodule RestApiBuilder do
   defmacro activate(:update) do
     quote do
       put "/:id" do
-        conn = handle_update var!(conn)
+        conn = provider().handle_update var!(conn), __MODULE__, provider_opts()
 
         if conn.assigns[:resource] && has_after_update?() do
           on_after_create category: singular_name(), name: :update, data: conn.assigns[:resource]
@@ -229,7 +223,7 @@ defmodule RestApiBuilder do
       end
 
       patch "/:id" do
-        conn = handle_update var!(conn)
+        conn = provider().handle_update var!(conn), __MODULE__, provider_opts()
 
         if conn.assigns[:resource] && has_after_update?() do
           on_after_create category: singular_name(), name: :update, data: conn.assigns[:resource]

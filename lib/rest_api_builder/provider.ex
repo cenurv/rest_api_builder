@@ -1,8 +1,12 @@
 defmodule RestApiBuilder.Provider do
   @macrocallback generate(opts :: List.t) :: Macro.t
 
+  @callback handle_preload(conn :: Plug.Conn.t, resource :: Module.t, opts :: List.t) :: Plug.Conn.t
   @callback handle_delete(conn :: Plug.Conn.t, resource :: Module.t, opts :: List.t) :: Plug.Conn.t
   @callback handle_create(conn :: Plug.Conn.t, resource :: Module.t, opts :: List.t) :: Plug.Conn.t
+  @callback handle_show(conn :: Plug.Conn.t, resource :: Module.t, opts :: List.t) :: Plug.Conn.t
+  @callback handle_index(conn :: Plug.Conn.t, resource :: Module.t, opts :: List.t) :: Plug.Conn.t
+  @callback handle_update(conn :: Plug.Conn.t, resource :: Module.t, opts :: List.t) :: Plug.Conn.t
 
   defmacro __using__(_opts) do
     quote do
