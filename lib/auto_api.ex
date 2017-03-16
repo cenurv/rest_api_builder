@@ -78,31 +78,6 @@ defmodule RestApiBuilder do
           append_resource Plug.Conn.assign(conn, :resources, []), resource
         end
 
-        defp append_api_values(%Plug.Conn{assigns: %{resources: resources}} = conn, %{} = model) do
-          {_current, current_href} = Enum.at resources, -1
-          relative_links = [%{name: :self, href: current_href}]
-
-          relative_links =
-            if length(resources) > 1 do
-              {_parent, parent_href} = Enum.at resources, -2
-              Enum.concat relative_links, [%{name: :parent, href: parent_href}]
-            else
-              relative_links
-            end
-
-          links =
-            []
-            |> Enum.concat(relative_links)
-            |> Enum.concat(resource_links(current_location(conn)))
-
-          attribute_keys =
-            
-
-          model
-          |> Map.put(:type, singular_name())
-          |> Map.put(:links, links)
-        end
-
         defmacro route_to("/:id", module_path) do
           path = "/:id/#{@resource_path}"
           quote do
