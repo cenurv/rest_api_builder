@@ -40,12 +40,12 @@ defmodule RestApiBuilder do
 
         def singular_name, do: unquote(singular_name)
 
-        defp send_resource(%{assigns: %{api_encoder: encoder}} = conn, resource) do
+        def send_resource(%{assigns: %{api_encoder: encoder}} = conn, resource) do
           conn = Plug.Conn.assign(conn, :resource, resource)
           encoder.(conn)
         end
 
-        defp send_errors(%{assigns: %{api_encoder: encoder}} = conn, error_code, errors) do
+        def send_errors(%{assigns: %{api_encoder: encoder}} = conn, error_code, errors) do
           conn = Plug.Conn.assign(conn, :errors, errors)
           conn = Plug.Conn.assign(conn, :error_code, error_code)
           encoder.(conn)
@@ -136,16 +136,17 @@ defmodule RestApiBuilder do
         def handle_preload(conn), do: conn
         def handle_index(conn), do: __not_ready__ conn
         def handle_show(conn), do: __not_ready__ conn
-        def handle_create(conn), do: __not_ready__ conn
         def handle_update(conn), do: __not_ready__ conn
-        def handle_delete(conn), do: __not_ready__ conn
 
         def group_links(_base_url \\ ""), do: []
         def resource_links(_base_url \\ ""), do: []
 
-        defoverridable [handle_index: 1, handle_show: 1, handle_create: 1, handle_update: 1,
-                        handle_delete: 1, handle_preload: 1, group_links: 1, resource_links: 1,
-                        group_links: 0, resource_links: 0]
+        def provider_opts, do: []
+        def provider, do: nil
+
+        defoverridable [handle_index: 1, handle_show: 1, handle_update: 1,
+                        handle_preload: 1, group_links: 1, resource_links: 1,
+                        group_links: 0, resource_links: 0, provider_opts: 0, provider: 0]
 
         direct_access()
       end
@@ -205,7 +206,7 @@ defmodule RestApiBuilder do
   defmacro activate(:create) do
     quote do
       post "/" do
-        conn = handle_create var!(conn)
+        conn = provider().handle_create var!(conn), __MODULE__, provider_opts()
 
         if conn.assigns[:resource] && has_after_create?() do
           on_after_create category: singular_name(), name: :create, data: conn.assigns[:resource]
@@ -241,7 +242,7 @@ defmodule RestApiBuilder do
   defmacro activate(:delete) do
     quote do
       delete "/:id" do
-        conn = handle_delete var!(conn)
+        conn = provider().handle_delete var!(conn), __MODULE__, provider_opts()
 
         if conn.status == 204 && conn.assigns[:current] && has_after_delete?() do
           on_after_create category: singular_name(), name: :delete, data: conn.assigns[:current]
@@ -262,6 +263,10 @@ defmodule RestApiBuilder do
   defmacro provider(provider_module, opts) do
     quote do
       require unquote(provider_module)
+
+      def provider_opts, do: unquote(opts)
+      def provider, do: unquote(provider_module)
+
       unquote(provider_module).generate unquote(opts)
     end
   end
